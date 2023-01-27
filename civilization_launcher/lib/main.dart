@@ -18,8 +18,7 @@ Future main() async {
     enabled: true,
   ));
 
-  // await DesktopWindow.setMinWindowSize(const Size(940, 560));
-  // await DesktopWindow.setMaxWindowSize(const Size(940, 560));
+  await DesktopWindow.setMinWindowSize(const Size(780, 520));
 }
 
 class MyApp extends StatelessWidget {

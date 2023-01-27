@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -54,34 +53,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   List<_SettingsField> _buildSettings(BuildContext context) {
     final settings = [
-      _SettingsField(
-        title: 'Minecraft',
-        description: 'Настройки Minecraft',
-        fields: [
-          _buildCategory(
-            context,
-            title: 'Запуск',
-            children: [
-              _buildField(
-                context,
-                title: 'Путь к лаунчеру',
-                content: PathField(
-                  path: _minecraftPath,
-                  onChangePath: (path) => _minecraftPath = path,
-                  onPathPick: (oldPath) async {
-                    final result = await FilePicker.platform.pickFiles(
-                      initialDirectory: p.dirname(oldPath),
-                      type: FileType.custom,
-                      allowedExtensions: ['exe'],
-                    );
-                    return result?.paths.first;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
       _SettingsField(
         title: 'Сборка',
         description: 'Настройки сборки модов',
@@ -219,6 +190,34 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      _SettingsField(
+        title: 'Minecraft',
+        description: 'Настройки Minecraft',
+        fields: [
+          _buildCategory(
+            context,
+            title: 'Запуск',
+            children: [
+              _buildField(
+                context,
+                title: 'Путь к лаунчеру',
+                content: PathField(
+                  path: _minecraftPath,
+                  onChangePath: (path) => _minecraftPath = path,
+                  onPathPick: (oldPath) async {
+                    final result = await FilePicker.platform.pickFiles(
+                      initialDirectory: p.dirname(oldPath),
+                      type: FileType.custom,
+                      allowedExtensions: ['exe'],
+                    );
+                    return result?.paths.first;
+                  },
                 ),
               ),
             ],

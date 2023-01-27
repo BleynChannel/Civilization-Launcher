@@ -34,12 +34,14 @@ dependencies:
   device_preview: ^1.1.0
   flutter:
     sdk: flutter
+  flutter_animate: ^3.0.0
   flutter_markdown: ^0.6.13
   flutter_svg: ^1.1.6
   freezed_annotation: ^2.2.0
   google_fonts: ^3.0.1
   loading_indicator: ^3.1.0
   path_provider: ^2.0.12
+  provider: ^6.0.5
   shared_preferences: ^2.0.17
   url_launcher: ^6.1.8
 

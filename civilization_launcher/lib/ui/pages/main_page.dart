@@ -1,11 +1,10 @@
 import 'package:civilization_launcher/repository/news_repository.dart';
-import 'package:civilization_launcher/ui/pages/settings_page.dart';
 import 'package:civilization_launcher/ui/widgets/background_view.dart';
 import 'package:civilization_launcher/ui/widgets/lazy_list_view.dart';
+import 'package:civilization_launcher/ui/widgets/navigator_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MainPage extends StatefulWidget {
@@ -17,7 +16,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   void _onSettingsClick(BuildContext context) {
-    Navigator.of(context).pushNamed('/settings');
+    NavigatorView.push(context, 'settings');
   }
 
   void _onPlayClick(BuildContext context) {}
@@ -57,10 +56,7 @@ class _MainPageState extends State<MainPage> {
                           ),
                           child: Text(
                             'Играть',
-                            style: GoogleFonts.nunitoSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.headline4,
                           ),
                           onPressed: () => _onPlayClick(context),
                         ),
@@ -128,24 +124,33 @@ class _MainNewsWidget extends StatefulWidget {
   _MainNewsState createState() => _MainNewsState();
 }
 
-class _MainNewsState extends State<_MainNewsWidget> {
-  static const _tabs = <String>[
-    'Новости',
-    'Список изменений',
-  ];
+typedef FetchCallback = Future<List<String>> Function();
 
+class _MainNewsState extends State<_MainNewsWidget> {
+  late Map<String, FetchCallback> _tabs;
+
+  late NewsRepository _repo;
   late String _currentTab;
 
-  Future<List<String>> _nextElement(int count) async {
-    return List.filled(count,
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
+  Future<List<String>> newsFetch() async {
+    return await _repo.fetch();
+  }
+
+  Future<List<String>> changelogFetch() async {
+    return await _repo.fetch();
   }
 
   @override
   void initState() {
     super.initState();
 
-    _currentTab = _tabs.first;
+    _tabs = <String, FetchCallback>{
+      'Новости': newsFetch,
+      'Список изменений': changelogFetch,
+    };
+
+    _repo = NewsRepository();
+    _currentTab = _tabs.keys.first;
   }
 
   @override
@@ -154,36 +159,47 @@ class _MainNewsState extends State<_MainNewsWidget> {
       children: <Widget>[
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _tabs.map<Widget>((tab) {
+          children: _tabs.entries.map<Widget>((tab) {
             return TextButton(
               style: TextButton.styleFrom(
                 foregroundColor: Colors.white,
               ),
-              onPressed: () => setState(() => _currentTab = tab),
+              onPressed: () => setState(() => _currentTab = tab.key),
               child: Text(
-                tab.toUpperCase(),
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  decoration: _currentTab == tab
-                      ? TextDecoration.underline
-                      : TextDecoration.none,
-                ),
+                tab.key.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headline4!.copyWith(
+                      decoration: _currentTab == tab.key
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                    ),
               ),
             );
           }).toList(),
         ),
         const SizedBox(height: 20),
-        Expanded(child: _buildList(context)),
+        Expanded(
+          child: IndexedStack(
+            index: _tabs.entries
+                .map<String>((tab) => tab.key)
+                .toList()
+                .indexOf(_currentTab),
+            children: _tabs.entries
+                .map((tab) => _buildList(context, tab.key, tab.value))
+                .toList(),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildList(BuildContext context) {
-    final repo = NewsRepository();
-
+  Widget _buildList(
+    BuildContext context,
+    String tab,
+    FetchCallback fetch,
+  ) {
     return LazyListView(
-      fetch: repo.fetch,
+      fetch: fetch,
       itemBuilder: (context, index, element) {
         return Card(
           shape:
@@ -191,19 +207,18 @@ class _MainNewsState extends State<_MainNewsWidget> {
           child: Column(children: [
             ListTile(
               title: Text(
-                "${_currentTab == 'Новости' ? _currentTab : 'Изменение'} №${index + 1}",
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black.withOpacity(0.85),
-                ),
+                "${tab == 'Новости' ? tab : 'Изменение'} №${index + 1}",
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headline4!.copyWith(
+                      color: Colors.black.withOpacity(0.85),
+                    ),
               ),
               trailing: Text(
                 '21.02.2023',
-                style: GoogleFonts.nunitoSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headline5!.copyWith(
+                      color: Colors.black.withOpacity(0.85),
+                    ),
               ),
             ),
             const Divider(color: Colors.black),

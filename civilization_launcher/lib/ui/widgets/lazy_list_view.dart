@@ -26,19 +26,23 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
   bool _isLoading = true;
   bool _hasMore = true;
 
+  late bool _isDispose;
+
   void _loadMore() {
     _isLoading = true;
     widget.fetch().then((List<T> fetchedList) {
-      if (fetchedList.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _hasMore = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _pairList.addAll(fetchedList);
-        });
+      if (!_isDispose) {
+        if (fetchedList.isEmpty) {
+          setState(() {
+            _isLoading = false;
+            _hasMore = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+            _pairList.addAll(fetchedList);
+          });
+        }
       }
     });
   }
@@ -55,6 +59,8 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
 
     _controller = ScrollController()..addListener(_scrollListener);
 
+    _isDispose = false;
+
     _isLoading = true;
     _hasMore = true;
     _loadMore();
@@ -62,6 +68,7 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
 
   @override
   void dispose() {
+    _isDispose = true;
     _controller.removeListener(_scrollListener);
     super.dispose();
   }
@@ -69,10 +76,12 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
   @override
   void didUpdateWidget(covariant LazyListView<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _pairList.clear();
-    _isLoading = true;
-    _hasMore = true;
-    _loadMore();
+    if (widget.fetch != oldWidget.fetch) {
+      _pairList.clear();
+      _isLoading = true;
+      _hasMore = true;
+      _loadMore();
+    }
   }
 
   @override

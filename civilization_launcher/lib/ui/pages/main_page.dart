@@ -56,7 +56,10 @@ class _MainPageState extends State<MainPage> {
                           ),
                           child: Text(
                             'Играть',
-                            style: Theme.of(context).textTheme.headline4,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headline4!
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
                           onPressed: () => _onPlayClick(context),
                         ),
@@ -161,17 +164,15 @@ class _MainNewsState extends State<_MainNewsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: _tabs.entries.map<Widget>((tab) {
             return TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-              ),
               onPressed: () => setState(() => _currentTab = tab.key),
               child: Text(
                 tab.key.toUpperCase(),
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headline4!.copyWith(
-                      decoration: _currentTab == tab.key
-                          ? TextDecoration.underline
-                          : TextDecoration.none,
+                      fontWeight: FontWeight.bold,
+                      color: _currentTab == tab.key
+                          ? Colors.white
+                          : Colors.white70,
                     ),
               ),
             );
@@ -211,13 +212,15 @@ class _MainNewsState extends State<_MainNewsWidget> {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headline4!.copyWith(
                       color: Colors.black.withOpacity(0.85),
+                      fontWeight: FontWeight.bold,
                     ),
               ),
               trailing: Text(
                 '21.02.2023',
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headline5!.copyWith(
+                style: Theme.of(context).textTheme.headline6!.copyWith(
                       color: Colors.black.withOpacity(0.85),
+                      fontWeight: FontWeight.bold,
                     ),
               ),
             ),

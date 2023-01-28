@@ -5,7 +5,7 @@ import 'package:civilization_launcher/ui/pages/main_page.dart';
 import 'package:civilization_launcher/ui/pages/settings_page.dart';
 import 'package:civilization_launcher/ui/widgets/navigator_view.dart';
 import 'package:desktop_window/desktop_window.dart';
-import 'package:device_preview/device_preview.dart';
+// import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,10 +21,12 @@ Future main() async {
     githubRepo: githubRepo,
   );
 
-  runApp(DevicePreview(
-    builder: (context) => const MyApp(),
-    enabled: true,
-  ));
+  // runApp(DevicePreview(
+  //   builder: (context) => const MyApp(),
+  //   enabled: true,
+  // ));
+
+  runApp(const MyApp());
 
   await DesktopWindow.setMinWindowSize(const Size(780, 520));
 }
@@ -67,9 +69,9 @@ class MyApp extends StatelessWidget {
       ),
 
       // DevicePreview
-      useInheritedMediaQuery: true,
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
+      // useInheritedMediaQuery: true,
+      // locale: DevicePreview.locale(context),
+      // builder: DevicePreview.appBuilder,
     );
   }
 }

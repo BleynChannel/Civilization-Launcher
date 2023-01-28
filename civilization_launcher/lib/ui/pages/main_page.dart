@@ -266,6 +266,16 @@ class _MainNewsState extends State<_MainNewsWidget> {
                     data: data,
                     selectable: true,
                     shrinkWrap: true,
+                    onTapLink: (text, href, title) async {
+                      if (href != null) {
+                        await launchUrl(Uri.parse(href));
+                      }
+                    },
+                    imageBuilder: (uri, title, alt) => Image.network(uri.path),
+                    checkboxBuilder: (value) => Checkbox(
+                      value: value,
+                      onChanged: (value) {},
+                    ),
                   ),
                 ),
                 const Divider(color: Colors.black54),
@@ -386,6 +396,11 @@ class _MainNewsState extends State<_MainNewsWidget> {
                     data: card.data ?? '# Данных нет',
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
+                    onTapLink: (text, href, title) async {
+                      if (href != null) {
+                        await launchUrl(Uri.parse(href));
+                      }
+                    },
                   ),
                 ),
               ),

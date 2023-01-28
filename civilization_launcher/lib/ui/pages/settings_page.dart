@@ -68,10 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _initSettings();
   }
 
-  List<_SettingsField> _buildSettings(
-    BuildContext context,
-    ModpackInfo modpackInfo,
-  ) {
+  List<_SettingsField> _buildSettings(BuildContext context) {
     final settings = [
       _SettingsField(
         title: 'Сборка',
@@ -118,125 +115,146 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
-          _buildCategory(
-            context,
-            title: 'Информация',
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.1),
-                  border: Border.all(color: Colors.white),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          updater.currentID != null
+              ? FutureBuilder(
+                  future: updater.getInfoFromID(id: updater.currentID!),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    return _buildCategory(
+                      context,
+                      title: 'Информация',
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10, right: 20),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: SvgPicture.asset(
-                              'assets/svg/minecraft-logo.svg',
-                              width: 64,
-                              height: 64,
-                            ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.1),
+                            border: Border.all(color: Colors.white),
                           ),
-                        ),
-                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: {
-                              'Версия сборки модов': modpackInfo.modpackVersion,
-                              'Версия Minecraft': modpackInfo.minecraftVersion,
-                              'Версия Forge': modpackInfo.forgeVersion,
-                            }
-                                .entries
-                                .map<Widget>((e) => Column(
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 10, right: 20),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: SvgPicture.asset(
+                                        'assets/svg/minecraft-logo.svg',
+                                        width: 64,
+                                        height: 64,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          e.key,
-                                          style: GoogleFonts.nunitoSans(
-                                            color: Colors.white70,
-                                            fontSize: 14,
-                                          ),
+                                      children: {
+                                        'Версия сборки модов':
+                                            snapshot.data!.modpackVersion,
+                                        'Версия Minecraft':
+                                            snapshot.data!.minecraftVersion,
+                                        'Версия Forge':
+                                            snapshot.data!.forgeVersion,
+                                      }
+                                          .entries
+                                          .map<Widget>((e) => Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    e.key,
+                                                    style:
+                                                        GoogleFonts.nunitoSans(
+                                                      color: Colors.white70,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    e.value,
+                                                    style:
+                                                        GoogleFonts.nunitoSans(
+                                                      color: Colors.white,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ))
+                                          .toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                height: 30,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      height: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: () => setState(() {
+                                          _isCheckLoading = true;
+                                        }),
+                                        child: Text(
+                                          'Проверить обновление',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headline6!
+                                              .copyWith(
+                                                  fontWeight: FontWeight.bold),
                                         ),
-                                        Text(
-                                          e.value,
-                                          style: GoogleFonts.nunitoSans(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ],
-                                    ))
-                                .toList(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    _isCheckLoading
+                                        ? FutureBuilder(
+                                            future: _onCheckUpdate(context),
+                                            builder: (context, snapshot) {
+                                              if (!snapshot.hasData) {
+                                                return const AspectRatio(
+                                                  aspectRatio: 1,
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              }
+
+                                              _isCheckLoading = false;
+
+                                              return Text(
+                                                snapshot.data!,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .headline5!
+                                                    .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                              );
+                                            },
+                                          )
+                                        : const SizedBox(),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      height: 30,
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            height: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () => setState(() {
-                                _isCheckLoading = true;
-                              }),
-                              child: Text(
-                                'Проверить обновление',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headline6!
-                                    .copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          _isCheckLoading
-                              ? FutureBuilder(
-                                  future: _onCheckUpdate(context),
-                                  builder: (context, snapshot) {
-                                    if (!snapshot.hasData) {
-                                      return const AspectRatio(
-                                        aspectRatio: 1,
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-
-                                    _isCheckLoading = false;
-
-                                    return Text(
-                                      snapshot.data!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headline5!
-                                          .copyWith(
-                                              fontWeight: FontWeight.bold),
-                                    );
-                                  },
-                                )
-                              : const SizedBox(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                    );
+                  },
+                )
+              : const SizedBox(),
         ],
       ),
       _SettingsField(
@@ -329,44 +347,35 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: updater.getInfoFromID(id: updater.currentID!),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox();
-        }
+    final settings = _buildSettings(context);
 
-        final settings = _buildSettings(context, snapshot.data!);
-
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-          child: Container(
-            color: Colors.black.withOpacity(0.4),
-            child: Row(
-              children: <Widget>[
-                SizedBox(
-                  width: MediaQuery.of(context).size.width / 4,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                        left: _windowPadding,
-                        top: _windowPadding,
-                        bottom: _windowPadding),
-                    child: _buildTabs(context, settings),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                        right: _windowPadding, top: _windowPadding),
-                    child: _buildContent(context, settings),
-                  ),
-                ),
-              ],
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+      child: Container(
+        color: Colors.black.withOpacity(0.4),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: MediaQuery.of(context).size.width / 4,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: _windowPadding,
+                    top: _windowPadding,
+                    bottom: _windowPadding),
+                child: _buildTabs(context, settings),
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(width: 20),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    right: _windowPadding, top: _windowPadding),
+                child: _buildContent(context, settings),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

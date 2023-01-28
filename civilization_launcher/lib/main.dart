@@ -1,4 +1,6 @@
 import 'package:civilization_launcher/const.dart';
+import 'package:civilization_launcher/core/civilization_lib.dart';
+import 'package:civilization_launcher/keys.dart';
 import 'package:civilization_launcher/ui/pages/main_page.dart';
 import 'package:civilization_launcher/ui/pages/settings_page.dart';
 import 'package:civilization_launcher/ui/widgets/navigator_view.dart';
@@ -12,6 +14,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future main() async {
   prefs = await SharedPreferences.getInstance();
   Animate.restartOnHotReload = true;
+
+  updater = ModpackUpdater(
+    githubToken: githubToken,
+    githubUser: githubUser,
+    githubRepo: githubRepo,
+  );
 
   runApp(DevicePreview(
     builder: (context) => const MyApp(),

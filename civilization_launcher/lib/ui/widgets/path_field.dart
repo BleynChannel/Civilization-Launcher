@@ -1,4 +1,4 @@
-import 'package:civilization_launcher/ui/utils.dart';
+import 'package:civilization_launcher/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

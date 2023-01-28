@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LazyListView<T> extends StatefulWidget {
+  final int count;
   final Future<List<T>> Function() fetch;
   final Widget Function(BuildContext context, int index, T element) itemBuilder;
   final Widget Function(BuildContext context, int index)? separatorBuilder;
@@ -8,6 +9,7 @@ class LazyListView<T> extends StatefulWidget {
 
   const LazyListView({
     Key? key,
+    this.count = 5,
     required this.fetch,
     required this.itemBuilder,
     this.separatorBuilder,
@@ -91,7 +93,11 @@ class _LazyListViewState<T> extends State<LazyListView<T>> {
         : _pairList.length;
     Widget itemBuilder(BuildContext context, int index) {
       if (index >= _pairList.length && widget.progressBuilder != null) {
-        return Center(child: widget.progressBuilder!(context));
+        if (_pairList.isEmpty || _pairList.length > widget.count) {
+          return Center(child: widget.progressBuilder!(context));
+        } else {
+          return const SizedBox();
+        }
       }
 
       return widget.itemBuilder(context, index, _pairList[index]);

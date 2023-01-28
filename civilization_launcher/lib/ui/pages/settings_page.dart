@@ -1,14 +1,17 @@
 import 'dart:ui';
 
 import 'package:civilization_launcher/const.dart';
+import 'package:civilization_launcher/core/civilization_lib.dart';
 import 'package:civilization_launcher/ui/widgets/background_view.dart';
 import 'package:civilization_launcher/ui/widgets/navigator_view.dart';
 import 'package:civilization_launcher/ui/widgets/path_field.dart';
+import 'package:civilization_launcher/utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -27,22 +30,36 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _isCheckLoading = false;
 
+  late ModpackInfo? _modpackInfo;
+
   void _onDoneClick(BuildContext context) async {
-    await prefs.setString('minecraft_path', _minecraftPath);
-    await prefs.setString('modpack_path', _modpackPath);
+    await prefs.setString(prefsMinecraftPath, _minecraftPath);
+    await prefs.setString(prefsModpackPath, _modpackPath);
 
     // ignore: use_build_context_synchronously
     NavigatorView.back(context);
   }
 
   Future<String> _onCheckUpdate(BuildContext context) async {
-    await Future.delayed(const Duration(milliseconds: 2000));
-    return 'Есть обновление!';
+    updater.currentID =
+        await getModpackID(prefs.getString(prefsModpackPath) ?? '');
+    final updateStatus = await updater.checkUpdate();
+
+    switch (updateStatus) {
+      case ModpackUpdateType.normal:
+        return 'У вас уже установлена актуальная версия сборки';
+      case ModpackUpdateType.update:
+        return 'Есть обновление!';
+      case ModpackUpdateType.install:
+        return 'Сперва необходимо установить сборку!';
+      case ModpackUpdateType.rollback:
+        return 'Необходимо откатить сборку!';
+    }
   }
 
   void _initSettings() {
-    _minecraftPath = prefs.getString('minecraft_path') ?? '';
-    _modpackPath = prefs.getString('modpack_path') ?? '';
+    _minecraftPath = prefs.getString(prefsMinecraftPath) ?? '';
+    _modpackPath = prefs.getString(prefsModpackPath) ?? '';
   }
 
   @override
@@ -51,7 +68,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _initSettings();
   }
 
-  List<_SettingsField> _buildSettings(BuildContext context) {
+  List<_SettingsField> _buildSettings(
+    BuildContext context,
+    ModpackInfo modpackInfo,
+  ) {
     final settings = [
       _SettingsField(
         title: 'Сборка',
@@ -64,13 +84,36 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildField(
                 context,
                 title: 'Путь к сборке модов',
-                content: PathField(
-                  path: _modpackPath,
-                  onChangePath: (path) => _modpackPath = path,
-                  onPathPick: (oldPath) async {
-                    return await FilePicker.platform
-                        .getDirectoryPath(initialDirectory: p.dirname(oldPath));
-                  },
+                content: Row(
+                  children: [
+                    Expanded(
+                      child: PathField(
+                        path: _modpackPath,
+                        onChangePath: (path) => _modpackPath = path,
+                        onPathPick: (oldPath) async {
+                          return await FilePicker.platform.getDirectoryPath(
+                              initialDirectory: p.dirname(oldPath));
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: () async {
+                        try {
+                          await launchUrl(Uri.parse('file:$_modpackPath'));
+                        } catch (_) {}
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(child: Icon(Icons.folder)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -97,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white54,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: SvgPicture.asset(
@@ -111,9 +154,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: {
-                              'Версия сборки модов': '1.0',
-                              'Версия Minecraft': '1.18.2',
-                              'Версия Forge': '40.1.85',
+                              'Версия сборки модов': modpackInfo.modpackVersion,
+                              'Версия Minecraft': modpackInfo.minecraftVersion,
+                              'Версия Forge': modpackInfo.forgeVersion,
                             }
                                 .entries
                                 .map<Widget>((e) => Column(
@@ -207,17 +250,40 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildField(
                 context,
                 title: 'Путь к лаунчеру',
-                content: PathField(
-                  path: _minecraftPath,
-                  onChangePath: (path) => _minecraftPath = path,
-                  onPathPick: (oldPath) async {
-                    final result = await FilePicker.platform.pickFiles(
-                      initialDirectory: p.dirname(oldPath),
-                      type: FileType.custom,
-                      allowedExtensions: ['exe'],
-                    );
-                    return result?.paths.first;
-                  },
+                content: Row(
+                  children: [
+                    Expanded(
+                      child: PathField(
+                        path: _minecraftPath,
+                        onChangePath: (path) => _minecraftPath = path,
+                        onPathPick: (oldPath) async {
+                          final result = await FilePicker.platform.pickFiles(
+                            initialDirectory: p.dirname(oldPath),
+                            type: FileType.custom,
+                            allowedExtensions: ['exe'],
+                          );
+                          return result?.paths.first;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: () async {
+                        try {
+                          await launchUrl(Uri.parse('file:$_minecraftPath'));
+                        } catch (_) {}
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(child: Icon(Icons.folder)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -263,11 +329,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = _buildSettings(context);
+    return FutureBuilder(
+      future: updater.getInfoFromID(id: updater.currentID!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox();
+        }
 
-    return Scaffold(
-      body: BackgroundView(
-        child: BackdropFilter(
+        final settings = _buildSettings(context, snapshot.data!);
+
+        return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
           child: Container(
             color: Colors.black.withOpacity(0.4),
@@ -294,8 +365,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

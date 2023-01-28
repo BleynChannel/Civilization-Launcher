@@ -1,26 +1,36 @@
 import 'dart:math';
 
+import 'package:civilization_launcher/core/installer/modpack/src/repo_controller.dart';
+import 'package:civilization_launcher/keys.dart';
+import 'package:civilization_launcher/model/card_model.dart';
+
 class NewsRepository {
-  // static const
+  final int total;
+  int countRaw = 0;
 
-  static const _itemsPerPage = 5;
-  int _currentPage = 0;
+  NewsRepository({this.total = 5});
 
-  Future<List<String>> fetch() async {
-    // final list = <String>[];
-    // final n = min(_itemsPerPage,  - _currentPage * _itemsPerPage);
+  Future<List<CardModel>> fetch() async {
+    final result = <CardModel>[];
 
-    // await Future.delayed(Duration(seconds: 1), () {
-    //   for (int i = 0; i < n; i++) {
-    //     list.add();
-    //   }
-    // });
-    // _currentPage++;
-    // return list;
+    const repo = RepoController(
+      githubToken: githubToken,
+      githubUser: githubUser,
+      githubRepo: githubRepo,
+    );
 
-    await Future.delayed(const Duration(seconds: 3));
+    final news = await repo.getFilesFromDirectory(directoryPath: 'news');
+    final count = min(total, news.length - countRaw);
 
-    return List.filled(_itemsPerPage,
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
+    for (int i = countRaw + count; i > 0; i--) {
+      final rawData = await repo.rawFile(path: 'news/$i.md');
+      final data = rawData.split('\n');
+
+      result.add(CardModel(title: data[0].substring(2), data: data.skip(1).join('\n')));
+    }
+
+    countRaw += count;
+
+    return result;
   }
 }

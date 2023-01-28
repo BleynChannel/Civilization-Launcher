@@ -1,10 +1,17 @@
+import 'package:civilization_launcher/const.dart';
+import 'package:civilization_launcher/core/civilization_lib.dart';
+import 'package:civilization_launcher/model/card_model.dart';
+import 'package:civilization_launcher/repository/changelog_repository.dart';
 import 'package:civilization_launcher/repository/news_repository.dart';
+import 'package:civilization_launcher/utils.dart';
 import 'package:civilization_launcher/ui/widgets/background_view.dart';
 import 'package:civilization_launcher/ui/widgets/lazy_list_view.dart';
 import 'package:civilization_launcher/ui/widgets/navigator_view.dart';
+import 'package:civilization_launcher/ui/widgets/updater_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MainPage extends StatefulWidget {
@@ -19,58 +26,154 @@ class _MainPageState extends State<MainPage> {
     NavigatorView.push(context, 'settings');
   }
 
-  void _onPlayClick(BuildContext context) {}
+  Future<String> _onCheckUpdate() async {
+    final modpackPath = prefs.getString(prefsModpackPath);
+
+    if (modpackPath == null || modpackPath.isEmpty) {
+      return 'Настройте сборку модов';
+    } else {
+      updater.currentID =
+          await getModpackID(prefs.getString(prefsModpackPath) ?? '');
+      final updateStatus = await updater.checkUpdate();
+
+      switch (updateStatus) {
+        case ModpackUpdateType.normal:
+          final minecraftPath = prefs.getString(prefsMinecraftPath);
+
+          if (minecraftPath == null || minecraftPath.isEmpty) {
+            return 'Настройте Minecraft';
+          } else {
+            return 'Играть';
+          }
+        case ModpackUpdateType.update:
+          return 'Обновить';
+        case ModpackUpdateType.install:
+          return 'Установить';
+        case ModpackUpdateType.rollback:
+          return 'Откатить';
+      }
+    }
+  }
+
+  void _onPlayClick(BuildContext context, String? title) {
+    if (title == null) return;
+
+    if (title == 'Настройте сборку модов' || title == 'Настройте Minecraft') {
+      _onSettingsClick(context);
+    } else {
+      final snackBar = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+
+      if (title == 'Обновить' || title == 'Установить' || title == 'Откатить') {
+        final path = prefs.getString(prefsModpackPath);
+
+        snackBar.showSnackBar(SnackBar(
+          content: UpdaterDialog(
+            update: loadUpdate(path!),
+            onCloseClick: () => setState(() => snackBar.hideCurrentSnackBar()),
+          ),
+          dismissDirection: DismissDirection.none,
+          backgroundColor: Colors.transparent,
+          duration: const Duration(days: 1),
+        ));
+      } else {
+        final path = prefs.getString(prefsMinecraftPath);
+
+        Launch.launchMinecraft(path: path!);
+
+        snackBar.showSnackBar(SnackBar(
+          content: Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              title: const Text('Лаунчер запущен'),
+              content: Text(
+                'Можете закрыть это диалоговое окно',
+                style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => snackBar.hideCurrentSnackBar(),
+                  child: Text(
+                    'Закрыть',
+                    style: Theme.of(context).textTheme.headline6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          duration: const Duration(seconds: 8),
+        ));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BackgroundView(
-        child: Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              const Expanded(
-                child: _MainNewsWidget(),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(child: _buildProfile(context)),
-                      const SizedBox(height: 20),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minWidth: 195,
-                          minHeight: 45,
-                          maxHeight: 45,
-                        ),
-                        child: ElevatedButton(
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          const Expanded(
+            child: _MainNewsWidget(),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: _buildProfile(context)),
+                  const SizedBox(height: 20),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 195,
+                      minHeight: 45,
+                      maxHeight: 45,
+                    ),
+                    child: FutureBuilder(
+                      future: _onCheckUpdate(),
+                      builder: (context, snapshot) {
+                        late Widget child;
+
+                        if (!snapshot.hasData) {
+                          child = const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        } else {
+                          child = Text(
+                            snapshot.data ?? '',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headline4!
+                                .copyWith(fontWeight: FontWeight.bold),
+                          );
+                        }
+
+                        return ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 20,
                           ),
-                          child: Text(
-                            'Играть',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headline4!
-                                .copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          onPressed: () => _onPlayClick(context),
-                        ),
-                      )
-                    ],
+                          onPressed: () => _onPlayClick(context, snapshot.data),
+                          child: child,
+                        );
+                      },
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -127,20 +230,63 @@ class _MainNewsWidget extends StatefulWidget {
   _MainNewsState createState() => _MainNewsState();
 }
 
-typedef FetchCallback = Future<List<String>> Function();
+typedef FetchCallback = Future<List<CardModel>> Function();
 
 class _MainNewsState extends State<_MainNewsWidget> {
+  static const totalElements = 5;
+
   late Map<String, FetchCallback> _tabs;
 
-  late NewsRepository _repo;
+  late NewsRepository _newsRepo;
+  late ChangelogRepository _changelogRepo;
   late String _currentTab;
 
-  Future<List<String>> newsFetch() async {
-    return await _repo.fetch();
+  Future<List<CardModel>> _newsFetch() async {
+    return await _newsRepo.fetch();
   }
 
-  Future<List<String>> changelogFetch() async {
-    return await _repo.fetch();
+  Future<List<CardModel>> _changelogFetch() async {
+    return await _changelogRepo.fetch();
+  }
+
+  void _onMarkdownFullScreen(BuildContext context, String data) {
+    final snackBar = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    snackBar.showSnackBar(SnackBar(
+      content: Dialog(
+        child: Theme(
+          data: ThemeData.light(),
+          child: Container(
+            width: MediaQuery.of(context).size.width / 1.4,
+            color: Colors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Markdown(
+                    data: data,
+                    selectable: true,
+                    shrinkWrap: true,
+                  ),
+                ),
+                const Divider(color: Colors.black54),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8, right: 16),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: ElevatedButton(
+                      onPressed: () => snackBar.hideCurrentSnackBar(),
+                      child: const Text('Закрыть'),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+      duration: const Duration(days: 1),
+    ));
   }
 
   @override
@@ -148,11 +294,13 @@ class _MainNewsState extends State<_MainNewsWidget> {
     super.initState();
 
     _tabs = <String, FetchCallback>{
-      'Новости': newsFetch,
-      'Список изменений': changelogFetch,
+      'Новости': _newsFetch,
+      'Список изменений': _changelogFetch,
     };
 
-    _repo = NewsRepository();
+    _newsRepo = NewsRepository(total: totalElements);
+    _changelogRepo = ChangelogRepository(total: totalElements);
+
     _currentTab = _tabs.keys.first;
   }
 
@@ -200,15 +348,16 @@ class _MainNewsState extends State<_MainNewsWidget> {
     FetchCallback fetch,
   ) {
     return LazyListView(
+      count: totalElements,
       fetch: fetch,
-      itemBuilder: (context, index, element) {
+      itemBuilder: (context, index, card) {
         return Card(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Column(children: [
             ListTile(
               title: Text(
-                "${tab == 'Новости' ? tab : 'Изменение'} №${index + 1}",
+                card.title,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headline4!.copyWith(
                       color: Colors.black.withOpacity(0.85),
@@ -216,7 +365,9 @@ class _MainNewsState extends State<_MainNewsWidget> {
                     ),
               ),
               trailing: Text(
-                '21.02.2023',
+                card.date != null
+                    ? '${card.date!.day}.${card.date!.month}.${card.date!.year}'
+                    : '',
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headline6!.copyWith(
                       color: Colors.black.withOpacity(0.85),
@@ -225,8 +376,32 @@ class _MainNewsState extends State<_MainNewsWidget> {
               ),
             ),
             const Divider(color: Colors.black),
-            ListTile(title: MarkdownBody(data: element)),
-            const SizedBox(height: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Theme(
+                  data: ThemeData.light(),
+                  child: Markdown(
+                    data: card.data ?? '# Данных нет',
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: TextButton(
+                  style: TextButton.styleFrom(foregroundColor: primaryColor),
+                  onPressed: () => _onMarkdownFullScreen(
+                      context, card.data ?? '# Данных нет'),
+                  child: const Text('Открыть на весь экран'),
+                ),
+              ),
+            )
           ]),
         );
       },

@@ -67,6 +67,31 @@ class RepoController {
     }
   }
 
+  //Читаем крупный файл размером до 100 мб
+  Future<String> rawBigFile({
+    required String path,
+    String branch = 'master',
+  }) async {
+    await for (final sha in getSHAFromFiles(files: [path], branch: branch)) {
+      final url = '$githubApi/repos/$githubUser/$githubRepo/git/blobs/$sha';
+
+      final response = await http.get(Uri.parse(url), headers: {
+        'Authorization': 'Bearer $githubToken',
+        'Accept': 'application/vnd.github.v3.raw',
+      });
+
+      if (response.statusCode == 200) {
+        return response.body;
+      } else {
+        final json = jsonDecode(response.body);
+        throw NetworkException(
+            code: response.statusCode, message: json['message']);
+      }
+    }
+
+    throw NetworkException(code: 404, message: 'Not found');
+  }
+
   //Получаем все ключи SHA для каждого файла из репозитория
   Stream<MapEntry<String, String>> getSHAFromFiles({
     required Iterable<String> files,
@@ -113,22 +138,27 @@ class RepoController {
   Future downloadFile({
     required String sha,
     required String filePath,
+    ProgressCallback? onProgress,
   }) async {
-    final instanceFile = await File(filePath).create(recursive: true);
-
     final url = '$githubApi/repos/$githubUser/$githubRepo/git/blobs/$sha';
 
-    final response = await http.get(Uri.parse(url), headers: {
-      'Authorization': 'Bearer $githubToken',
-      'Accept': 'application/vnd.github.v3.raw',
-    });
-
-    if (response.statusCode == 200) {
-      await instanceFile.writeAsBytes(response.body.codeUnits);
-    } else {
-      final json = jsonDecode(response.body);
-      throw NetworkException(
-          code: response.statusCode, message: json['message']);
+    try {
+      await Dio().download(
+        url,
+        filePath,
+        options: Options(headers: {
+          'Authorization': 'Bearer $githubToken',
+          'Accept': 'application/vnd.github.v3.raw'
+        }),
+        onReceiveProgress: onProgress,
+      );
+    } on DioError catch (e) {
+      if (e.response != null) {
+        throw NetworkException(
+          code: e.response?.statusCode ?? 0,
+          message: e.response?.statusMessage ?? '',
+        );
+      }
     }
   }
 

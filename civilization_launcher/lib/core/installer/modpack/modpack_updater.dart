@@ -137,7 +137,7 @@ class ModpackUpdater {
     final isRollback = currentID! > _newID!;
 
     //Получаем информацию по всем изменениям каждой версии
-    final raw = await _repoController.rawFile(path: 'update');
+    final raw = await _repoController.rawBigFile(path: 'update');
     final updateList = UpdateParser.fromUpdate(data: raw);
 
     onBuildDeltaUpdateProgress?.call(1, totalProgress);
